@@ -1,0 +1,8 @@
+node_modules
+.next
+.next-e2e*
+generated
+e2e/.results*
+.env*
+!.env.example
+.git

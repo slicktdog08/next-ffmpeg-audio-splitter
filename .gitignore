@@ -1,0 +1,21 @@
+node_modules
+.DS_Store
+/.next
+/.next-e2e*
+/out
+next-env.d.ts
+*.tsbuildinfo
+yarn-error.log
+npm-debug.log*
+
+# Secrets never go in git: copy .env.example to .env.local and fill it in
+.env
+.env*
+!.env.example
+
+# Track splitter scratch + local store
+/generated
+
+# Playwright
+/e2e/.results*
+playwright-report
