@@ -1,24 +1,61 @@
 # next-ffmpeg-audio-splitter
 
-Split one long MP3 (a mixtape, a live set, a whole album in a single file) into individual tracks, each tagged
-with artist, album, year, genre and cover art, and download them as a zip.
+**Turn one long MP3 into an album.** Upload a mixtape, a live set or a whole album ripped as a single file, mark
+where each track starts, and download a zip of individual tracks, each tagged with artist, album, year, genre and
+cover art.
 
-**Use it for free at [YOUR-DOMAIN](https://YOUR-DOMAIN)** — no install, no account.
+<p align="center">
+  <img src="docs/screenshots/editor.png" alt="The splitter with a loaded MP3: cover art, transport controls, a waveform with three labelled track regions, and the editable tracklist below" width="900">
+</p>
 
-We run the hosted version, and we also share all of its code here so others can learn from it, run it
-themselves, and build on it. If you just want to split a file, use the hosted site. If you want to see how a
-real-world Next.js + ffmpeg app fits together (streaming uploads, server-sent progress, ID3 tagging, a
-waveform editor, end-to-end tests on four viewports), read on.
+## Try it
 
-## Features
+It's free, with no account and no install:
+**[candycreative.digital/audio-track-splitter](https://candycreative.digital/audio-track-splitter)**
 
-- Waveform editor ([wavesurfer.js](https://wavesurfer.xyz/)): tap along while it plays or drag regions to mark tracks
-- Paste timestamps as text (`0:00 Intro`, `3:12 Song two`…) and export them again
-- Album info and cover art written into every track (ID3 tags + attached picture)
-- Output as the original MP3 stream (lossless copy), re-encoded MP3, AAC (`.m4a`) or Opus
-- Live progress over server-sent events while ffmpeg cuts
-- Work survives a reload: the audio and cover live in IndexedDB, the tracklist in `localStorage`
-- Guided first-visit tour; works on phones down to 375px wide
+That's where it lives today. It may move to its own domain later, and this README will point to the new address.
+
+## About this project
+
+This is a personal project by me, [Tyler Clay](https://tylerthedeveloper.com): a simple, free way to split long
+recordings into properly tagged tracks. I host it for anyone to use, and I'm sharing the code so others can learn
+from it, run their own copy, or build something better on top of it.
+
+It's free to use, and the code is MIT licensed. There are no ads and no catch.
+
+More of my work is at **[tylerthedeveloper.com](https://tylerthedeveloper.com)**.
+
+## What it does
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/upload.png" alt="Upload screen: 'Turn one long MP3 into an album' with a Choose MP3 button and three steps"></td>
+    <td width="50%"><img src="docs/screenshots/album-info.png" alt="Album info drawer with cover art, artist, album, year, genre, codec and bitrate fields"></td>
+  </tr>
+  <tr>
+    <td><b>Drop in one long MP3.</b> It stays in your browser (IndexedDB) until you split, so a reload doesn't lose your work.</td>
+    <td><b>Add album info and cover art.</b> They're written into every track as ID3 tags and an attached picture.</td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/guide.png" alt="First-visit guide asking 'Want to press play and divide it as you listen?'"></td>
+    <td><img src="docs/screenshots/results.png" alt="Results: 'Your album is ready.' with a live progress log and a Download Zip button"></td>
+  </tr>
+  <tr>
+    <td><b>Mark tracks as you listen,</b> or paste timestamps you already have (<code>0:00 Intro</code>, <code>3:12 Song two</code>…). A short guide walks first-timers through it.</td>
+    <td><b>Split and download.</b> ffmpeg cuts every track on the server, streaming progress live, and you get one zip.</td>
+  </tr>
+</table>
+
+<img src="docs/screenshots/mobile.png" alt="The splitter on a phone: compact player, waveform regions and a tracklist" width="260" align="right">
+
+- Waveform editor ([wavesurfer.js](https://wavesurfer.xyz/)): tap **Add track** while it plays, or drag regions
+- Paste timestamps as text, and save them back out to a file
+- Output as the original MP3 stream (lossless, fastest), re-encoded MP3, AAC (`.m4a`) or Opus
+- Live progress over server-sent events while ffmpeg works
+- Built for phones too, down to a 375px-wide iPhone SE: layout tested on four screen sizes, with no pinch-zoom or keyboard surprises
+- Downloads as one zip, or as individual tracks
+
+<br clear="right">
 
 ## How it works
 
@@ -36,11 +73,22 @@ download zip / single tracks     ── GET ?key ─▶ stream from storage
 | Path | What lives there |
 | --- | --- |
 | `app/page.tsx` | The tool, rendered at `/` |
-| `app/audio-tools/split-track/` | API route: upload, ffmpeg cutting/tagging, zipping, storage, downloads |
-| `src/components/AudioSplitTrack/` | UI: waveform, timestamp editor, album drawer, progress log, tour |
+| `app/audio-tools/split-track/` | API route: upload, ffmpeg cutting and tagging, zipping, storage, downloads |
+| `src/components/AudioSplitTrack/` | UI: waveform, timestamp editor, album drawer, progress log, guided tour |
 | `src/redux/` | Client state, persisted with redux-persist |
 | `src/utils/` | S3 client, reCAPTCHA verification, IndexedDB helpers |
 | `e2e/` | Playwright specs, fixtures and visual baselines |
+
+Some of the more interesting bits if you're here to learn:
+
+- **Streaming progress without WebSockets.** The split endpoint answers its POST with a `text/event-stream`, so
+  the client reads ffmpeg's progress from the same request that uploaded the file.
+- **Validating before ffmpeg runs.** Timestamps are checked against the real duration from `ffprobe`, so a
+  reversed or out-of-range cut returns an error naming the track instead of crashing ffmpeg.
+- **Cover art that survives every codec.** MP3 gets an ID3 attached picture; `.m4a` gets an attached cover stream.
+  The e2e suite checks each one with `ffprobe`.
+- **Work that survives a reload.** The audio and cover live in IndexedDB; only the durable parts of the tracklist go
+  to `localStorage`.
 
 ## Running it yourself
 
@@ -77,7 +125,7 @@ docker run -p 3000:3000 --env-file .env.production.local audio-splitter
 ```
 
 The image includes ffmpeg. The tool needs a long-running Node server: splits stream progress for as long as
-ffmpeg runs and uploads can be large, so serverless function limits are a poor fit.
+ffmpeg runs, and uploads can be large, so serverless function limits are a poor fit.
 
 ## Tests
 
@@ -90,7 +138,9 @@ yarn e2e:ui                  # watch it run
 ```
 
 The E2E suite starts its own dev server on port 3900 with local storage and the captcha skipped, so it needs
-no credentials. See [`e2e/README.md`](e2e/README.md) for what each spec covers.
+no credentials. The screenshots in this README come from the suite's walkthrough spec
+(`yarn e2e audio-splitter.walkthrough` writes them to `e2e/.results/walkthrough/`).
+See [`e2e/README.md`](e2e/README.md) for what each spec covers.
 
 ## Secrets
 
@@ -102,7 +152,8 @@ production values come from the host's secret store. To check before you push:
 gitleaks git --redact .
 ```
 
-Found a security issue? Please email the maintainer instead of opening a public issue.
+Found a security issue? Please reach out through [tylerthedeveloper.com](https://tylerthedeveloper.com) instead of
+opening a public issue.
 
 ## Contributing
 
@@ -111,4 +162,4 @@ If you change the layout on purpose, refresh the visual baselines with `yarn e2e
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE) © [Tyler Clay](https://tylerthedeveloper.com)

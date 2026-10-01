@@ -4,6 +4,8 @@ module.exports = {
     distDir: process.env.NEXT_DIST_DIR || '.next',
     output: 'standalone',
     reactStrictMode: false,
+    // no floating dev badge: it would land in every e2e screenshot
+    devIndicators: false,
     turbopack: {
         root: __dirname,
     },
